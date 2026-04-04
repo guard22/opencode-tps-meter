@@ -1,5 +1,5 @@
 diff --git a/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx b/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx
-index 382bd28..5ab5172 100644
+index 382bd28..28c1aab 100644
 --- a/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx
 +++ b/packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx
 @@ -72,6 +72,54 @@ function randomIndex(count: number) {
@@ -178,7 +178,7 @@ index 382bd28..5ab5172 100644
                        {(item) => (
                          <text fg={theme.textMuted} wrapMode="none">
 -                          {[item().context, item().cost].filter(Boolean).join(" · ")}
-+                          {[liveTps() ? `~${liveTps()}` : item().totalTps, item().context, item().cost].filter(Boolean).join(" · ")}
++                          {[liveTps() ? `~${liveTps()}` : item().outputTps, item().context, item().cost].filter(Boolean).join(" · ")}
                          </text>
                        )}
                      </Match>

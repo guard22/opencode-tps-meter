@@ -4,7 +4,7 @@ Adds a live TPS meter to the OpenCode TUI footer.
 
 It shows:
 - live rolling TPS estimate over the last 15 seconds while a response is streaming
-- exact TPS for the last completed assistant response after completion
+- exact output TPS for the last completed assistant response after completion
 
 ## Demo
 
@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/uni
 
 - This is a TUI patch. It does not modify OpenCode Desktop.
 - It preserves your current working directory when launching `opencode`.
-- The live TPS is an estimate based on stream deltas. The final TPS uses actual token usage from the completed assistant message.
+- The live TPS is an estimate based on stream deltas. The final displayed TPS uses exact output-token usage from the completed assistant message.
 - Requires `bun` and `git`.
 
 ## Tested
