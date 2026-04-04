@@ -64,9 +64,8 @@ if [ ! -d "$SOURCE_DIR" ]; then
   exit 1
 fi
 ORIG_PWD="${PWD:-$(pwd)}"
-cd "$SOURCE_DIR"
-export PWD="$ORIG_PWD"
-exec "__BUN_BIN__" --conditions=browser ./src/index.ts "$@"
+export OPENCODE_LAUNCH_CWD="$ORIG_PWD"
+exec "__BUN_BIN__" --cwd "$SOURCE_DIR" --conditions=browser ./src/index.ts "$@"
 WRAPEOF
 perl -0pi -e 's|__BUN_BIN__|'"$BUN_BIN"'|g' "$WRAPPER"
 chmod +x "$WRAPPER"
