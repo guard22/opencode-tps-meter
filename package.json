@@ -1,0 +1,42 @@
+{
+  "name": "@guard22/opencode-tps-meter",
+  "version": "1.0.0",
+  "description": "CLI installer for the OpenCode TPS Meter TUI patch",
+  "type": "module",
+  "bin": {
+    "opencode-tps-meter": "./scripts/cli.mjs"
+  },
+  "files": [
+    "README.md",
+    "install.sh",
+    "uninstall.sh",
+    "manifest.sh",
+    "scripts",
+    "patches"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guard22/opencode-tps-meter.git"
+  },
+  "homepage": "https://github.com/guard22/opencode-tps-meter#readme",
+  "bugs": {
+    "url": "https://github.com/guard22/opencode-tps-meter/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "help": "node ./scripts/cli.mjs help",
+    "pack:check": "npm pack --dry-run"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "opencode",
+    "tps",
+    "cli",
+    "tui",
+    "codex"
+  ]
+}

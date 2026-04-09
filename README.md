@@ -16,7 +16,13 @@ This is a **TUI/CLI patch**, not a Desktop extension and not a normal OpenCode p
 
 ## Install
 
-One command:
+Preferred npm install command:
+
+```bash
+npx @guard22/opencode-tps-meter install
+```
+
+Fallback raw installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/install.sh | bash
@@ -30,7 +36,7 @@ Default behavior:
 To force a specific version:
 
 ```bash
-OPENCODE_TPS_VERSION=1.3.14 curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/install.sh | bash
+OPENCODE_TPS_VERSION=1.4.1 npx @guard22/opencode-tps-meter install
 ```
 
 ## How the installer works
@@ -65,7 +71,7 @@ If you install a newer OpenCode release and the source layout still matches the 
 ## Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/uninstall.sh | bash
+npx @guard22/opencode-tps-meter uninstall
 ```
 
 ## Notes
