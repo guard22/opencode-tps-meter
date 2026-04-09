@@ -12,7 +12,7 @@ It shows:
 
 Full video: [assets/tps-meter-demo.mp4](assets/tps-meter-demo.mp4)
 
-This is a **TUI/CLI patch**, not a Desktop extension and not a normal OpenCode plugin. OpenCode does not expose a plugin hook for the TUI footer, so this project patches the OpenCode source for supported versions.
+This is a **TUI/CLI patch**, not a Desktop extension and not a normal OpenCode plugin. OpenCode does not expose a plugin hook for the TUI footer, so this project patches the OpenCode source during install.
 
 ## Install
 
@@ -23,11 +23,11 @@ curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/ins
 ```
 
 Default behavior:
-- if `OPENCODE_TPS_VERSION` is set, install that exact supported version
-- else if your installed `opencode-stock` or non-wrapper `opencode` version is supported, install that version
-- else fall back to the latest supported version from [`manifest.sh`](manifest.sh)
+- if `OPENCODE_TPS_VERSION` is set, install that exact OpenCode version
+- else if your installed `opencode-stock` or non-wrapper `opencode` version is detectable, patch that version
+- else fall back to the latest upstream stable OpenCode release
 
-To force a specific supported version:
+To force a specific version:
 
 ```bash
 OPENCODE_TPS_VERSION=1.3.14 curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/install.sh | bash
@@ -35,24 +35,32 @@ OPENCODE_TPS_VERSION=1.3.14 curl -fsSL https://raw.githubusercontent.com/guard22
 
 ## How the installer works
 
-- downloads the exact supported OpenCode tag
-- downloads the matching patch for that exact version
-- runs `git apply --check` before modifying anything
+- downloads the exact OpenCode tag for the requested version
+- runs a content-based auto-patcher against the OpenCode source
 - installs the patched source into `~/.local/share/opencode-tps-meter/releases/<version>`
 - points `~/.local/share/opencode-tps-meter/current` at the active release
 - installs a wrapper at `~/.local/bin/opencode`
 - preserves your original launcher as `~/.local/bin/opencode-stock`
 
-If the requested OpenCode version is not supported, or the patch does not apply cleanly, the installer exits without replacing your launcher.
+If the requested OpenCode version changed the TUI structure too much, the installer exits without replacing your launcher.
 
-## Supported versions
+## Compatibility
 
-Current supported versions are listed in [`manifest.sh`](manifest.sh).
+The installer now tries to patch **newer OpenCode releases automatically**. It is no longer hardcoded to a short manual allowlist.
 
-Right now:
+Known tested versions are listed in [`manifest.sh`](manifest.sh).
 
-- `1.3.14`
+Right now the tested set is:
+
 - `1.3.13`
+- `1.3.14`
+- `1.3.15`
+- `1.3.16`
+- `1.3.17`
+- `1.4.0`
+- `1.4.1`
+
+If you install a newer OpenCode release and the source layout still matches the expected TUI anchors, the installer should work without needing a new repo release.
 
 ## Uninstall
 
@@ -67,10 +75,15 @@ curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/uni
 - Live TPS is an estimate based on stream deltas.
 - Final TPS uses exact **output-token** usage from the completed assistant message.
 - Requires `bun`, `git`, and `curl`.
-- Future OpenCode releases may require a new patch; unsupported versions fail cleanly instead of half-installing.
+- If upstream rewrites the TUI footer structure, the auto-patcher will fail cleanly instead of half-installing.
 
 ## Tested
 
+- OpenCode `1.4.1`
+- OpenCode `1.4.0`
+- OpenCode `1.3.17`
+- OpenCode `1.3.16`
+- OpenCode `1.3.15`
 - OpenCode `1.3.14`
 - OpenCode `1.3.13`
 - Bun `1.3.5`

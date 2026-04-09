@@ -12,6 +12,8 @@ STOCK="$BIN_DIR/opencode-stock"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST_LOCAL="$SCRIPT_DIR/manifest.sh"
 MANIFEST_DOWNLOADED="$INSTALL_ROOT/manifest.sh"
+PATCHER_LOCAL="$SCRIPT_DIR/scripts/apply-opencode-tps-patch.mjs"
+PATCHER_DOWNLOADED="$INSTALL_ROOT/apply-opencode-tps-patch.mjs"
 TMP_DIR=""
 
 cleanup() {
@@ -46,11 +48,31 @@ load_manifest() {
   . "$MANIFEST_DOWNLOADED"
 }
 
+load_patcher() {
+  if [ -f "$PATCHER_LOCAL" ]; then
+    printf '%s' "$PATCHER_LOCAL"
+    return
+  fi
+
+  mkdir -p "$INSTALL_ROOT"
+  curl -fsSL "$REPO_RAW_BASE/scripts/apply-opencode-tps-patch.mjs" -o "$PATCHER_DOWNLOADED"
+  printf '%s' "$PATCHER_DOWNLOADED"
+}
+
+latest_upstream_tag() {
+  git ls-remote --tags --refs "$UPSTREAM_REPO" 'v*' \
+    | awk -F/ '{print $3}' \
+    | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+    | sort -V \
+    | tail -n 1
+}
+
 need git
 need curl
 need bun
 
 load_manifest
+PATCHER_SCRIPT="$(load_patcher)"
 
 detect_installed_version() {
   local candidate=""
@@ -69,37 +91,27 @@ BUN_BIN="$(command -v bun)"
 DETECTED_VERSION="$(detect_installed_version)"
 
 if [ -n "${OPENCODE_TPS_VERSION:-}" ]; then
-  REQUESTED_VERSION="$OPENCODE_TPS_VERSION"
-elif [ -n "$DETECTED_VERSION" ] && is_supported_version "$DETECTED_VERSION"; then
+  REQUESTED_VERSION="${OPENCODE_TPS_VERSION#v}"
+elif [ -n "$DETECTED_VERSION" ] && is_semver_version "$DETECTED_VERSION"; then
   REQUESTED_VERSION="$DETECTED_VERSION"
 else
-  REQUESTED_VERSION="$LATEST_SUPPORTED"
+  REQUESTED_VERSION="$(latest_upstream_tag)"
+  REQUESTED_VERSION="${REQUESTED_VERSION#v}"
 fi
 
-is_supported_version "$REQUESTED_VERSION" || fail \
-  "Unsupported OpenCode version '$REQUESTED_VERSION'. Supported versions: $(print_supported_versions | paste -sd ', ' -)"
+is_semver_version "$REQUESTED_VERSION" || fail \
+  "Could not resolve a valid OpenCode version. Got '$REQUESTED_VERSION'."
 
 UPSTREAM_TAG="$(resolve_upstream_tag "$REQUESTED_VERSION")"
-PATCH_RELATIVE_PATH="$(resolve_patch_path "$REQUESTED_VERSION")"
-PATCH_URL="$REPO_RAW_BASE/$PATCH_RELATIVE_PATH"
-PATCH_LOCAL="$SCRIPT_DIR/$PATCH_RELATIVE_PATH"
 RELEASE_DIR="$RELEASES_DIR/$REQUESTED_VERSION"
-PATCH_FILE="$INSTALL_ROOT/opencode-$REQUESTED_VERSION.patch"
 
 mkdir -p "$INSTALL_ROOT" "$RELEASES_DIR" "$BIN_DIR"
 TMP_DIR="$(mktemp -d "$INSTALL_ROOT/.install.XXXXXX")"
 TMP_SRC="$TMP_DIR/opencode-src"
 
-if [ -f "$PATCH_LOCAL" ]; then
-  cp "$PATCH_LOCAL" "$PATCH_FILE"
-else
-  curl -fsSL "$PATCH_URL" -o "$PATCH_FILE"
-fi
-
 git clone --depth 1 --branch "$UPSTREAM_TAG" "$UPSTREAM_REPO" "$TMP_SRC"
-git -C "$TMP_SRC" apply --check "$PATCH_FILE" || fail \
-  "Patch does not apply cleanly to $UPSTREAM_TAG. This version is not safe to install with the current patch."
-git -C "$TMP_SRC" apply "$PATCH_FILE"
+"$BUN_BIN" "$PATCHER_SCRIPT" "$TMP_SRC" "$REQUESTED_VERSION" || fail \
+  "Auto-patcher could not patch $UPSTREAM_TAG cleanly. This OpenCode release changed the TUI structure and needs a patcher update."
 (cd "$TMP_SRC" && bun install --frozen-lockfile)
 
 if [ -d "$RELEASE_DIR" ]; then
@@ -141,7 +153,12 @@ chmod +x "$WRAPPER"
 echo "Installed OpenCode TPS Meter for OpenCode $REQUESTED_VERSION."
 if [ -n "$DETECTED_VERSION" ] && [ "$REQUESTED_VERSION" != "$DETECTED_VERSION" ]; then
   echo "Detected installed OpenCode version: $DETECTED_VERSION"
-  echo "Using latest supported version instead: $REQUESTED_VERSION"
+  echo "Using patched version instead: $REQUESTED_VERSION"
+fi
+if ! is_tested_version "$REQUESTED_VERSION"; then
+  echo "Warning: $REQUESTED_VERSION is not in the tested list yet. The auto-patcher matched this release successfully, but it is still an unverified upstream version."
+else
+  echo "Tested upstream versions: $(print_tested_versions | paste -sd ',' - | sed 's/,/, /g')"
 fi
 echo "Run: opencode"
 echo "Fallback: opencode-stock"

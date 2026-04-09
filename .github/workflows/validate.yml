@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ["1.3.13", "1.3.14"]
+        version: ["1.3.13", "1.3.14", "1.3.15", "1.3.16", "1.3.17", "1.4.0", "1.4.1"]
 
     steps:
       - uses: actions/checkout@v4
@@ -20,20 +20,16 @@ jobs:
         run: |
           source ./manifest.sh
           echo "tag=$(resolve_upstream_tag '${{ matrix.version }}')" >> "$GITHUB_OUTPUT"
-          echo "patch=$(resolve_patch_path '${{ matrix.version }}')" >> "$GITHUB_OUTPUT"
 
       - name: Clone OpenCode
         run: git clone --depth 1 --branch "${{ steps.manifest.outputs.tag }}" https://github.com/anomalyco/opencode.git opencode-src
 
-      - name: Apply patch check
-        run: git -C opencode-src apply --check "$GITHUB_WORKSPACE/${{ steps.manifest.outputs.patch }}"
-
-      - name: Apply patch
-        run: git -C opencode-src apply "$GITHUB_WORKSPACE/${{ steps.manifest.outputs.patch }}"
-
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Apply TPS auto-patch
+        run: bun ./scripts/apply-opencode-tps-patch.mjs ./opencode-src "${{ matrix.version }}"
 
       - name: Install dependencies
         working-directory: opencode-src

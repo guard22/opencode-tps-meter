@@ -1,28 +1,33 @@
 #!/usr/bin/env bash
 
-LATEST_SUPPORTED="1.3.14"
-SUPPORTED_VERSIONS=("1.3.14" "1.3.13")
+MIN_TESTED="1.3.13"
+LATEST_TESTED="1.4.1"
+TESTED_VERSIONS=("1.3.13" "1.3.14" "1.3.15" "1.3.16" "1.3.17" "1.4.0" "1.4.1")
+
+is_semver_version() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
 
 resolve_upstream_tag() {
-  case "$1" in
-    1.3.14) printf '%s\n' 'v1.3.14' ;;
-    1.3.13) printf '%s\n' 'v1.3.13' ;;
-    *) return 1 ;;
-  esac
+  if [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf '%s\n' "$1"
+    return 0
+  fi
+  is_semver_version "$1" || return 1
+  printf 'v%s\n' "$1"
 }
 
-resolve_patch_path() {
-  case "$1" in
-    1.3.14) printf '%s\n' 'patches/opencode-1.3.14-tps.patch' ;;
-    1.3.13) printf '%s\n' 'patches/opencode-1.3.13-tps.patch' ;;
-    *) return 1 ;;
-  esac
+is_tested_version() {
+  local version="$1"
+  local tested
+  for tested in "${TESTED_VERSIONS[@]}"; do
+    if [ "$tested" = "$version" ]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
-is_supported_version() {
-  resolve_upstream_tag "$1" >/dev/null 2>&1
-}
-
-print_supported_versions() {
-  printf '%s\n' "${SUPPORTED_VERSIONS[@]}"
+print_tested_versions() {
+  printf '%s\n' "${TESTED_VERSIONS[@]}"
 }
