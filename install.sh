@@ -6,9 +6,11 @@ UPSTREAM_REPO="https://github.com/anomalyco/opencode.git"
 INSTALL_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/opencode-tps-meter"
 RELEASES_DIR="$INSTALL_ROOT/releases"
 CURRENT_LINK="$INSTALL_ROOT/current"
-BIN_DIR="$HOME/.local/bin"
-WRAPPER="$BIN_DIR/opencode"
-STOCK="$BIN_DIR/opencode-stock"
+LAUNCHER_STATE="$INSTALL_ROOT/launcher.env"
+DEFAULT_BIN_DIR="$HOME/.local/bin"
+BIN_DIR=""
+WRAPPER=""
+STOCK=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST_LOCAL="$SCRIPT_DIR/manifest.sh"
 MANIFEST_DOWNLOADED="$INSTALL_ROOT/manifest.sh"
@@ -33,6 +35,25 @@ need() {
 fail() {
   echo "Error: $*" >&2
   exit 1
+}
+
+resolve_bin_dir() {
+  if [ -n "${EXISTING_OPENCODE:-}" ]; then
+    local detected_dir
+    detected_dir="$(dirname "$EXISTING_OPENCODE")"
+    if [ -w "$detected_dir" ]; then
+      printf '%s' "$detected_dir"
+      return
+    fi
+  fi
+
+  printf '%s' "$DEFAULT_BIN_DIR"
+}
+
+is_tps_wrapper() {
+  local target="$1"
+  [ -f "$target" ] || return 1
+  grep -q 'opencode-tps-meter/current/packages/opencode' "$target" 2>/dev/null
 }
 
 load_manifest() {
@@ -89,6 +110,9 @@ detect_installed_version() {
 EXISTING_OPENCODE="$(command -v opencode || true)"
 BUN_BIN="$(command -v bun)"
 DETECTED_VERSION="$(detect_installed_version)"
+BIN_DIR="$(resolve_bin_dir)"
+WRAPPER="$BIN_DIR/opencode"
+STOCK="$BIN_DIR/opencode-stock"
 
 if [ -n "${OPENCODE_TPS_VERSION:-}" ]; then
   REQUESTED_VERSION="${OPENCODE_TPS_VERSION#v}"
@@ -120,7 +144,13 @@ fi
 mv "$TMP_SRC" "$RELEASE_DIR"
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
-if [ -e "$WRAPPER" ] && [ ! -e "$STOCK" ]; then
+cat > "$LAUNCHER_STATE" <<EOF
+BIN_DIR='$BIN_DIR'
+WRAPPER='$WRAPPER'
+STOCK='$STOCK'
+EOF
+
+if [ -e "$WRAPPER" ] && [ ! -e "$STOCK" ] && ! is_tps_wrapper "$WRAPPER"; then
   cp "$WRAPPER" "$STOCK"
 elif [ ! -e "$STOCK" ] && [ -n "$EXISTING_OPENCODE" ] && [ "$EXISTING_OPENCODE" != "$WRAPPER" ]; then
   cat > "$STOCK" <<'STOCKEOF'
@@ -135,7 +165,7 @@ cat > "$WRAPPER" <<'WRAPEOF'
 #!/bin/zsh
 set -euo pipefail
 SOURCE_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/opencode-tps-meter/current/packages/opencode"
-FALLBACK="$HOME/.local/bin/opencode-stock"
+FALLBACK="__STOCK_PATH__"
 if [ ! -d "$SOURCE_DIR" ]; then
   if [ -x "$FALLBACK" ]; then
     exec "$FALLBACK" "$@"
@@ -148,6 +178,7 @@ export OPENCODE_LAUNCH_CWD="$ORIG_PWD"
 exec "__BUN_BIN__" --cwd "$SOURCE_DIR" --conditions=browser ./src/index.ts "$@"
 WRAPEOF
 perl -0pi -e 's|__BUN_BIN__|'"$BUN_BIN"'|g' "$WRAPPER"
+perl -0pi -e 's|__STOCK_PATH__|'"$STOCK"'|g' "$WRAPPER"
 chmod +x "$WRAPPER"
 
 echo "Installed OpenCode TPS Meter for OpenCode $REQUESTED_VERSION."
@@ -155,6 +186,7 @@ if [ -n "$DETECTED_VERSION" ] && [ "$REQUESTED_VERSION" != "$DETECTED_VERSION" ]
   echo "Detected installed OpenCode version: $DETECTED_VERSION"
   echo "Using patched version instead: $REQUESTED_VERSION"
 fi
+echo "Launcher directory: $BIN_DIR"
 if ! is_tested_version "$REQUESTED_VERSION"; then
   echo "Warning: $REQUESTED_VERSION is not in the tested list yet. The auto-patcher matched this release successfully, but it is still an unverified upstream version."
 else
