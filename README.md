@@ -45,8 +45,8 @@ OPENCODE_TPS_VERSION=1.4.1 npx @guard22/opencode-tps-meter install
 - runs a content-based auto-patcher against the OpenCode source
 - installs the patched source into `~/.local/share/opencode-tps-meter/releases/<version>`
 - points `~/.local/share/opencode-tps-meter/current` at the active release
-- installs a wrapper at `~/.local/bin/opencode`
-- preserves your original launcher as `~/.local/bin/opencode-stock`
+- installs a wrapper next to your detected `opencode` binary
+- preserves your original launcher as `opencode-stock` in that same directory
 
 If the requested OpenCode version changed the TUI structure too much, the installer exits without replacing your launcher.
 
@@ -65,6 +65,7 @@ Right now the tested set is:
 - `1.3.17`
 - `1.4.0`
 - `1.4.1`
+- `1.14.20`
 
 If you install a newer OpenCode release and the source layout still matches the expected TUI anchors, the installer should work without needing a new repo release.
 
@@ -87,6 +88,7 @@ npx @guard22/opencode-tps-meter uninstall
 
 - OpenCode `1.4.1`
 - OpenCode `1.4.0`
+- OpenCode `1.14.20`
 - OpenCode `1.3.17`
 - OpenCode `1.3.16`
 - OpenCode `1.3.15`
