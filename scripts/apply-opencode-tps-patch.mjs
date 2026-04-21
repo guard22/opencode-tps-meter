@@ -33,14 +33,21 @@ function replaceRegexOnce(source, regex, replacer, label) {
   return source.replace(regex, replacer)
 }
 
+function firstExistingFile(...files) {
+  const found = files.find((file) => fs.existsSync(file))
+  if (!found) fail(`Missing expected file: ${files.join(", ")}`)
+  return found
+}
+
 function patchPromptIndexTsx(file) {
   let source = read(file)
+  const eventSource = source.includes("const event = useEvent()") ? "event" : "sdk.event"
 
   if (!source.includes("function estimateStreamTokens(delta: string)")) {
     const helpers = `
 
-function estimateStreamTokens(delta: string) {
-  return Math.max(1, Math.ceil(Buffer.byteLength(delta, "utf8") / 4))
+function estimateStreamTokens(chars: number) {
+  return Math.max(0, Math.round(Math.max(0, chars) / 4))
 }
 
 function formatTps(value: number) {
@@ -113,6 +120,7 @@ function truncateTrackedMessages(stats: Record<string, StreamSample[]>) {
 
   const [streamSamples, setStreamSamples] = createSignal<StreamSample[]>([])
   const [messageSamples, setMessageSamples] = createSignal<Record<string, StreamSample[]>>({})
+  const [activeMessageTokenTotal, setActiveMessageTokenTotal] = createSignal<{ messageID: string; tokens: number }>()
   const [clock, setClock] = createSignal(Date.now())
 
   function pruneSamples(now = Date.now()) {
@@ -131,19 +139,28 @@ function truncateTrackedMessages(stats: Record<string, StreamSample[]>) {
     })
   }
 
-  sdk.event.on("message.part.delta", (evt) => {
+  ${eventSource}.on("message.part.delta", (evt) => {
     if (!props.sessionID) return
     if (evt.properties.field !== "text") return
     if (evt.properties.messageID !== activeAssistantMessage()?.id) return
     const parts = sync.data.part[evt.properties.messageID]
     const part = parts?.find((item) => item.id === evt.properties.partID)
     if (!part) return
-    if (part.type !== "text" && part.type !== "reasoning") return
+    if (part.type !== "text") return
+    const previousChars = (parts ?? []).reduce((sum, item) => sum + (item.type === "text" ? item.text.length : 0), 0)
+    const previousTotal =
+      activeMessageTokenTotal()?.messageID === evt.properties.messageID
+        ? activeMessageTokenTotal()!.tokens
+        : estimateStreamTokens(previousChars)
+    const nextTotal = estimateStreamTokens(previousChars + evt.properties.delta.length)
+    const deltaTokens = Math.max(0, nextTotal - previousTotal)
     const now = Date.now()
-    appendSample(evt.properties.messageID, { at: now, tokens: estimateStreamTokens(evt.properties.delta) })
+    setActiveMessageTokenTotal({ messageID: evt.properties.messageID, tokens: nextTotal })
+    if (deltaTokens <= 0) return
+    appendSample(evt.properties.messageID, { at: now, tokens: deltaTokens })
   })
 
-  sdk.event.on("message.updated", (evt) => {
+  ${eventSource}.on("message.updated", (evt) => {
     if (evt.properties.info.sessionID !== props.sessionID) return
     if (evt.properties.info.role !== "assistant") return
     if (evt.properties.info.time.completed) {
@@ -243,33 +260,54 @@ function patchIndexTs(file) {
   write(file, source)
 }
 
-function patchMetaTs(file) {
+function patchVersionFile(file) {
   let source = read(file)
+
+  if (source.includes("export const VERSION =")) {
+    source = replaceRegexOnce(
+      source,
+      /export const VERSION = typeof OPENCODE_VERSION === "string" \? OPENCODE_VERSION : "[^"]+"/,
+      `export const VERSION = typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "${version}"`,
+      "VERSION export",
+    )
+    source = replaceRegexOnce(
+      source,
+      /export const CHANNEL = typeof OPENCODE_CHANNEL === "string" \? OPENCODE_CHANNEL : "[^"]+"/,
+      'export const CHANNEL = typeof OPENCODE_CHANNEL === "string" ? OPENCODE_CHANNEL : "latest"',
+      "CHANNEL export",
+    )
+    write(file, source)
+    return
+  }
+
   source = replaceRegexOnce(
     source,
-    /export const VERSION = typeof OPENCODE_VERSION === "string" \? OPENCODE_VERSION : "[^"]+"/,
-    `export const VERSION = typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "${version}"`,
-    "VERSION export",
+    /export const InstallationVersion = typeof OPENCODE_VERSION === "string" \? OPENCODE_VERSION : "[^"]+"/,
+    `export const InstallationVersion = typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "${version}"`,
+    "InstallationVersion export",
   )
   source = replaceRegexOnce(
     source,
-    /export const CHANNEL = typeof OPENCODE_CHANNEL === "string" \? OPENCODE_CHANNEL : "[^"]+"/,
-    'export const CHANNEL = typeof OPENCODE_CHANNEL === "string" ? OPENCODE_CHANNEL : "latest"',
-    "CHANNEL export",
+    /export const InstallationChannel = typeof OPENCODE_CHANNEL === "string" \? OPENCODE_CHANNEL : "[^"]+"/,
+    'export const InstallationChannel = typeof OPENCODE_CHANNEL === "string" ? OPENCODE_CHANNEL : "latest"',
+    "InstallationChannel export",
   )
   write(file, source)
 }
 
 const promptFile = path.join(rootDir, "packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx")
 const indexFile = path.join(rootDir, "packages/opencode/src/index.ts")
-const metaFile = path.join(rootDir, "packages/opencode/src/installation/meta.ts")
+const versionFile = firstExistingFile(
+  path.join(rootDir, "packages/opencode/src/installation/meta.ts"),
+  path.join(rootDir, "packages/opencode/src/installation/version.ts"),
+)
 
-for (const file of [promptFile, indexFile, metaFile]) {
+for (const file of [promptFile, indexFile, versionFile]) {
   if (!fs.existsSync(file)) fail(`Missing expected file: ${file}`)
 }
 
 patchPromptIndexTsx(promptFile)
 patchIndexTs(indexFile)
-patchMetaTs(metaFile)
+patchVersionFile(versionFile)
 
 console.log(`Patched OpenCode ${version} with TPS meter`)
