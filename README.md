@@ -2,6 +2,10 @@
 
 Adds a live TPS meter to the OpenCode TUI footer.
 
+[![npm version](https://img.shields.io/npm/v/@guard22/opencode-tps-meter)](https://www.npmjs.com/package/@guard22/opencode-tps-meter)
+[![license](https://img.shields.io/github/license/floze-the-genius/opencode-tps-meter)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/floze-the-genius/opencode-tps-meter)](https://github.com/floze-the-genius/opencode-tps-meter/stargazers)
+
 It shows:
 - live rolling TPS over the last 15 seconds while a response is streaming
 - exact output TPS after the response completes
@@ -25,7 +29,7 @@ npx @guard22/opencode-tps-meter install
 Fallback raw installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/guard22/opencode-tps-meter/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/floze-the-genius/opencode-tps-meter/main/install.sh | bash
 ```
 
 Default behavior:

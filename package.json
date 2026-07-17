@@ -16,12 +16,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/guard22/opencode-tps-meter.git"
+    "url": "git+https://github.com/floze-the-genius/opencode-tps-meter.git"
   },
-  "homepage": "https://github.com/guard22/opencode-tps-meter#readme",
+  "homepage": "https://github.com/floze-the-genius/opencode-tps-meter#readme",
   "bugs": {
-    "url": "https://github.com/guard22/opencode-tps-meter/issues"
+    "url": "https://github.com/floze-the-genius/opencode-tps-meter/issues"
   },
+  "author": "Floze",
+  "license": "MIT",
   "engines": {
     "node": ">=18"
   },

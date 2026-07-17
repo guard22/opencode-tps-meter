@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_RAW_BASE="https://raw.githubusercontent.com/guard22/opencode-tps-meter/main"
+REPO_RAW_BASE="https://raw.githubusercontent.com/floze-the-genius/opencode-tps-meter/main"
 UPSTREAM_REPO="https://github.com/anomalyco/opencode.git"
 INSTALL_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/opencode-tps-meter"
 RELEASES_DIR="$INSTALL_ROOT/releases"
