@@ -9,10 +9,15 @@ CURRENT_LINK="$INSTALL_ROOT/current"
 BIN_DIR="$HOME/.local/bin"
 WRAPPER="$BIN_DIR/opencode"
 STOCK="$BIN_DIR/opencode-stock"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANIFEST_LOCAL="$SCRIPT_DIR/manifest.sh"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-}"
+if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+else
+  SCRIPT_DIR=""
+fi
+MANIFEST_LOCAL="${SCRIPT_DIR:+$SCRIPT_DIR/manifest.sh}"
 MANIFEST_DOWNLOADED="$INSTALL_ROOT/manifest.sh"
-PATCHER_LOCAL="$SCRIPT_DIR/scripts/apply-opencode-tps-patch.mjs"
+PATCHER_LOCAL="${SCRIPT_DIR:+$SCRIPT_DIR/scripts/apply-opencode-tps-patch.mjs}"
 PATCHER_DOWNLOADED="$INSTALL_ROOT/apply-opencode-tps-patch.mjs"
 TMP_DIR=""
 
@@ -36,7 +41,7 @@ fail() {
 }
 
 load_manifest() {
-  if [ -f "$MANIFEST_LOCAL" ]; then
+  if [ -n "$MANIFEST_LOCAL" ] && [ -f "$MANIFEST_LOCAL" ]; then
     # shellcheck disable=SC1090
     . "$MANIFEST_LOCAL"
     return
@@ -49,7 +54,7 @@ load_manifest() {
 }
 
 load_patcher() {
-  if [ -f "$PATCHER_LOCAL" ]; then
+  if [ -n "$PATCHER_LOCAL" ] && [ -f "$PATCHER_LOCAL" ]; then
     printf '%s' "$PATCHER_LOCAL"
     return
   fi
