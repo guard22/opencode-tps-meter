@@ -1,12 +1,13 @@
 {
   "name": "@guard22/opencode-tps-meter",
-  "version": "1.0.0",
-  "description": "CLI installer for the OpenCode TPS Meter TUI patch",
+  "version": "1.1.0",
+  "description": "Fail-closed OpenCode TUI patch for live and final output TPS observability",
   "type": "module",
   "bin": {
-    "opencode-tps-meter": "./scripts/cli.mjs"
+    "opencode-tps-meter": "scripts/cli.mjs"
   },
   "files": [
+    "CHANGELOG.md",
     "README.md",
     "install.sh",
     "uninstall.sh",
@@ -37,6 +38,8 @@
   "keywords": [
     "opencode",
     "tps",
+    "observability",
+    "performance",
     "cli",
     "tui",
     "codex"

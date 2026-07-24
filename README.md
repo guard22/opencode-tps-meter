@@ -1,14 +1,26 @@
 # OpenCode TPS Meter
 
-Adds a live TPS meter to the OpenCode TUI footer.
+Adds live streaming and final output-token throughput to the OpenCode TUI
+footer. The installer uses a fail-closed source patcher: if an upstream layout
+is not recognized, it stops before replacing the user's launcher.
 
 [![npm version](https://img.shields.io/npm/v/@guard22/opencode-tps-meter)](https://www.npmjs.com/package/@guard22/opencode-tps-meter)
 [![license](https://img.shields.io/github/license/floze-the-genius/opencode-tps-meter)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/floze-the-genius/opencode-tps-meter)](https://github.com/floze-the-genius/opencode-tps-meter/stargazers)
 
-It shows:
+## Why this exists
+
+Coding-agent throughput is operational data: it helps distinguish model
+latency, transport stalls, rendering delays, and regressions between releases.
+OpenCode does not currently expose a normal plugin hook for its TUI footer, so
+this project owns the compatibility work required to keep that signal visible.
+
+It provides:
+
 - live rolling TPS over the last 15 seconds while a response is streaming
 - exact output TPS after the response completes
+- compatibility validation against legacy and current OpenCode layouts
+- launcher preservation and a clean uninstall path
 
 ## Demo
 
@@ -16,17 +28,30 @@ It shows:
 
 Full video: [assets/tps-meter-demo.mp4](assets/tps-meter-demo.mp4)
 
-This is a **TUI/CLI patch**, not a Desktop extension and not a normal OpenCode plugin. OpenCode does not expose a plugin hook for the TUI footer, so this project patches the OpenCode source during install.
+This is a **TUI/CLI patch**, not a Desktop extension and not a normal OpenCode
+plugin. It patches the exact requested OpenCode source release during install.
+
+## Maintenance contract
+
+- Current compatibility target: OpenCode `1.18.4`
+- Tested releases are patch-applied and typechecked in the GitHub Actions matrix
+- Split-TUI releases validate both `packages/opencode` and `packages/tui`
+- Unknown source layouts fail before the launcher is replaced
+- Security reports use [private vulnerability reporting](SECURITY.md)
+- Contributions follow the focused compatibility workflow in
+  [CONTRIBUTING.md](CONTRIBUTING.md)
+
+Primary maintainer: [Floze](https://github.com/floze-the-genius)
 
 ## Install
 
-Preferred npm install command:
+Install the published package:
 
 ```bash
 npx @guard22/opencode-tps-meter install
 ```
 
-Fallback raw installer:
+Install the latest repository version:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/floze-the-genius/opencode-tps-meter/main/install.sh | bash
@@ -70,6 +95,7 @@ Right now the tested set is:
 - `1.4.0`
 - `1.4.1`
 - `1.14.20`
+- `1.18.4`
 
 If you install a newer OpenCode release and the source layout still matches the expected TUI anchors, the installer should work without needing a new repo release.
 
@@ -90,12 +116,13 @@ npx @guard22/opencode-tps-meter uninstall
 
 ## Tested
 
+- OpenCode `1.18.4`
+- OpenCode `1.14.20`
 - OpenCode `1.4.1`
 - OpenCode `1.4.0`
-- OpenCode `1.14.20`
 - OpenCode `1.3.17`
 - OpenCode `1.3.16`
 - OpenCode `1.3.15`
 - OpenCode `1.3.14`
 - OpenCode `1.3.13`
-- Bun `1.3.5`
+- Bun `1.3.13`

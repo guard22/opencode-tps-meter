@@ -43,7 +43,7 @@ function patchPromptIndexTsx(file) {
   let source = read(file)
   const eventSource = source.includes("const event = useEvent()") ? "event" : "sdk.event"
 
-  if (!source.includes("function estimateStreamTokens(delta: string)")) {
+  if (!source.includes("function estimateStreamTokens(")) {
     const helpers = `
 
 function estimateStreamTokens(chars: number) {
@@ -120,7 +120,7 @@ function truncateTrackedMessages(stats: Record<string, StreamSample[]>) {
 
   const [streamSamples, setStreamSamples] = createSignal<StreamSample[]>([])
   const [messageSamples, setMessageSamples] = createSignal<Record<string, StreamSample[]>>({})
-  const [activeMessageTokenTotal, setActiveMessageTokenTotal] = createSignal<{ messageID: string; tokens: number }>()
+  const [activeMessageCharTotal, setActiveMessageCharTotal] = createSignal<{ messageID: string; chars: number }>()
   const [clock, setClock] = createSignal(Date.now())
 
   function pruneSamples(now = Date.now()) {
@@ -147,15 +147,14 @@ function truncateTrackedMessages(stats: Record<string, StreamSample[]>) {
     const part = parts?.find((item) => item.id === evt.properties.partID)
     if (!part) return
     if (part.type !== "text") return
-    const previousChars = (parts ?? []).reduce((sum, item) => sum + (item.type === "text" ? item.text.length : 0), 0)
-    const previousTotal =
-      activeMessageTokenTotal()?.messageID === evt.properties.messageID
-        ? activeMessageTokenTotal()!.tokens
-        : estimateStreamTokens(previousChars)
-    const nextTotal = estimateStreamTokens(previousChars + evt.properties.delta.length)
+    const previousChars =
+      activeMessageCharTotal()?.messageID === evt.properties.messageID ? activeMessageCharTotal()!.chars : 0
+    const nextChars = previousChars + evt.properties.delta.length
+    const previousTotal = estimateStreamTokens(previousChars)
+    const nextTotal = estimateStreamTokens(nextChars)
     const deltaTokens = Math.max(0, nextTotal - previousTotal)
     const now = Date.now()
-    setActiveMessageTokenTotal({ messageID: evt.properties.messageID, tokens: nextTotal })
+    setActiveMessageCharTotal({ messageID: evt.properties.messageID, chars: nextChars })
     if (deltaTokens <= 0) return
     appendSample(evt.properties.messageID, { at: now, tokens: deltaTokens })
   })
@@ -165,6 +164,7 @@ function truncateTrackedMessages(stats: Record<string, StreamSample[]>) {
     if (evt.properties.info.role !== "assistant") return
     if (evt.properties.info.time.completed) {
       pruneSamples(evt.properties.info.time.completed)
+      setActiveMessageCharTotal(undefined)
     }
   })
 
@@ -256,7 +256,16 @@ function patchIndexTs(file) {
 
 `
 
-  source = replaceOnce(source, 'process.on("unhandledRejection", (e) => {', `${block}process.on("unhandledRejection", (e) => {`, "unhandledRejection handler")
+  if (source.includes('process.on("unhandledRejection", (e) => {')) {
+    source = replaceOnce(
+      source,
+      'process.on("unhandledRejection", (e) => {',
+      `${block}process.on("unhandledRejection", (e) => {`,
+      "unhandledRejection handler",
+    )
+  } else {
+    source = replaceOnce(source, "const args = hideBin(process.argv)", `${block}const args = hideBin(process.argv)`, "CLI args block")
+  }
   write(file, source)
 }
 
@@ -295,11 +304,15 @@ function patchVersionFile(file) {
   write(file, source)
 }
 
-const promptFile = path.join(rootDir, "packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx")
+const promptFile = firstExistingFile(
+  path.join(rootDir, "packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx"),
+  path.join(rootDir, "packages/tui/src/component/prompt/index.tsx"),
+)
 const indexFile = path.join(rootDir, "packages/opencode/src/index.ts")
 const versionFile = firstExistingFile(
   path.join(rootDir, "packages/opencode/src/installation/meta.ts"),
   path.join(rootDir, "packages/opencode/src/installation/version.ts"),
+  path.join(rootDir, "packages/core/src/installation/version.ts"),
 )
 
 for (const file of [promptFile, indexFile, versionFile]) {

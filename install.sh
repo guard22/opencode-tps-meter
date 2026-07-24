@@ -114,10 +114,10 @@ detect_installed_version() {
 
 EXISTING_OPENCODE="$(command -v opencode || true)"
 BUN_BIN="$(command -v bun)"
-DETECTED_VERSION="$(detect_installed_version)"
 BIN_DIR="$(resolve_bin_dir)"
 WRAPPER="$BIN_DIR/opencode"
 STOCK="$BIN_DIR/opencode-stock"
+DETECTED_VERSION="$(detect_installed_version)"
 
 if [ -n "${OPENCODE_TPS_VERSION:-}" ]; then
   REQUESTED_VERSION="${OPENCODE_TPS_VERSION#v}"
